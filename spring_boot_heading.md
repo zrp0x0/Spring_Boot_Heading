@@ -651,3 +651,95 @@ public String toString() {
 
 ### Spring Boot 서비스 구조
 - Client <- DTO -> Controller <- DTO -> Service <- Entity -> DAO(Repository) <- Entity -> DB
+- DTO를 받아서 내용을 추가 혹은 삭제해서 Entity라는 객체를 만듦
+- Repository(DAO)에서 Entity를 가지고 통신함
+- 이후 DTO를 통해 Client - Controller - Service간에 통신
+
+- Service / DAO(Repository)
+  - 이 두 개는 인터페이스로 구현함
+  - 상속받은 Impl가 실제 로직을 갖게됨
+
+
+### Entity(Domain)
+- 데이터베이스에 쓰일 컬럼과 여러 엔티티 간의 연관관계를 정의
+- 데이터베이스의 테이블을 하나의 엔티티로 생각해도 무방함
+- 실제 데이터베이스의 테이블과 1:1로 매핑됨
+- 이 클래스의 필드는 각 테이블 내부의 컬럼을 의미
+
+
+### Repository
+- Entity에 의해 생성된 데이터베이스에 접근하는 메소드를 사용하기 위한 인터페이스
+- Service와 DB를 연결하는 고리의 역할을 수행
+- 데이터베이스에 적용하고자하는 CRUD를 정의하는 영역
+
+
+### DAO(Data Access Object)
+- 데이터베이스에 접근하는 객체를 의미(Persistance Layer)
+- Service가 DB에 연결할 수 있게 해주는 역할
+- DB를 사용하여 데이터를 조회하거나 조작하는 기능을 전담
+- Repository의 메소드를 가지고 활용함
+
+
+### DTO(Data Transfer Object)
+- DTO는 VO(Value Object)로 불리기도 하며, 계층간 데이터 교환을 위한 객체를 의미
+- VO의 경우 **Read Only**의 개념을 가지고 있음
+- Entity는 DB와 동일하게 만들어져있는 클래스르 의미
+- DTO는 Entity랑 같은 필드값만을 가지고 있을 수도 있지만, 없거나 추가된 사항을 가지고 있을 수도 있음
+- 엄밀히 말하면 DTO는 전송용 / VO는 값 자체를 표현하는 용(불변성)
+
+
+### Spring Boot Data JPA
+- 의존성 추가
+```xml
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-data-jpa</artifactId>
+</dependency>
+```
+- @Entity
+- @Table(name = "product"): 테이블을 자동으로 생성해줄 때 테이블 이름
+- @Id
+
+
+### 이번 강의에서는 알려주지 않은 설정이 많음
+- 이런 것도 필요한 법!! 오히려 좋아!! 해보자!!
+
+
+### 설정
+- MARIADB 데이터베이스 aronud_hub_shop 만들기
+
+- pom.xml 의존성 추가
+```xml
+<dependency>
+  <groupId>org.mariadb.jdbc</groupId>
+  <artifactId>mariadb-java-client</artifactId>
+</dependency>
+```
+
+- application.properties 설정
+```
+# MariaDB 연결 설정
+spring.datasource.driver-class-name=org.mariadb.jdbc.Driver
+# localhost:3306 뒤의 'shop'은 미리 생성한 데이터베이스(Schema) 이름이어야 합니다.
+spring.datasource.url=jdbc:mariadb://localhost:3306/around_hub_shop
+spring.datasource.username=root
+spring.datasource.password=비밀번호
+
+# JPA/Hibernate 설정
+spring.jpa.show-sql=true
+spring.jpa.hibernate.ddl-auto=update // 이 설정이 있으면 엔티티 클래스와 DB 테이블을 비교 후 없으면 만들고, 변경된 부분이 있으면 추가해줌
+# MariaDB에 최적화된 SQL을 생성하기 위한 Dialect 설정
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MariaDB103Dialect
+```
+
+- ProductController 만들기
+  - 이건 다음 강의에서 함
+
+
+
+--- 
+# 15. ORM, JPA, Spring Data JPA 적용하기
+
+
+
+### 
