@@ -966,4 +966,100 @@ public class ProductController {
 # 17. 유효성 검사
 
 
-### 
+### 유효성 검사 / 데이터 검증(Validation)이란?
+- 서비스의 비즈니스 로직이 올바르게 동작하기 위해 사용되는 데이터에 대한 사전 검증하는 작업이 필요함
+- 유효성 검사 혹은 데이터 검증이라고 부르는데, 흔히 Validation이라고 부름
+- 데이터 검증은 여러 계층에서 발생하는 흔한 작업
+- Validation은 들어오는 데이터에 대해 의도한 형식의 값이 제대로 들어오는지 체크하는 과정을 뜻함
+
+
+### 일반적인 Validation의 문제점
+- 일반적인 어플리케이션에서 사용되던 Validation 방식은 몇가지 문제가 존재
+  - 어플리케이션 전체적으로 분산되어 존재
+  - 코드의 중복이 심함(코드가 복잡해짐)
+  - 비즈니스 로직에 섞여 있어 검사 로직 추적이 어려움
+- ex. ProductController[VC] / ProductService[VC] / ProductRepository[VC] 좋지 않음 (VC: Validation Code)
+
+
+### Bean Validation / Hibernate Validator
+- Bean Validation은 어노테이션을 통해 다양한 데이터를 검증할 수 있게 기능을 제공
+- Hibernate Validator는 Bean Validation 명세에 대한 구현체
+- Spring Boot의 유효성 검사 표준은 Hibernate Validator를 채택
+- 이전 버전의 Spring Boot에서는 starter-web에 validation이 포함되어 있었지만, 2.3 버전 부터 starter-validation을 추가해야함
+```xml
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-validation</artifactId>
+</dependency>
+```
+
+
+### Validation 관련 어노테이션
+- @Size: 문자의 길이 조건
+- @NotNull: null 값 불가
+- @NotEmpty: @NotNull + ""값 불가
+- @NotBlank: @NotEmpty + " "값 불가
+
+- @Past: 과거 날짜
+- @PastOrPresent: @Past + 오늘 날짜
+- @Future: 미래 날짜
+- @FutureOrPresent: @Future + 오늘 날짜
+
+- @Pattern: 정규식을 통한 조건
+
+- @Max: 최대값 조건 설정
+- @Min: 최소값 조건 설정
+- @AssertTrue / AsserFalse: 참/거짓 조건 설정
+
+- @Valid: 해당 객체의 유효성 검사
+
+
+### 실습
+```java
+@NotNull private String productId;
+@NotNull private String productName;
+@NotNull @Min(value=500) @Max(value=300000) private int productPrice;
+@NotNull @Min(value=0) @Max(value=9999) private int productStock;
+
+public ResponseEntity<ProductDto> createProduct(@Valid @RequestBody ProductDto productDto) {
+```
+
+```java
+// Validation Code Example: 수동으로 validaion을 하는 코드 / 지양함!!!
+if (productDto.getProductId().equals("") || productDto.getProductId().isEmpty()) {
+    LOGGER.error("[createProduct] failed Response :: productId is Empty");
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(productDto);
+}
+```
+
+
+### 추가 내용
+- @Valid 검사 전파
+```java
+@Data
+public class ProductDto {
+    @NotBlank(message = "상품 ID는 필수입니다.")
+    private String productId;
+
+    @Min(value = 100, message = "가격은 최소 100원 이상이어야 합니다.")
+    private int price;
+}
+
+@Data
+public class OrderDto {
+    @NotBlank(message = "주문 번호는 필수입니다.")
+    private String orderId;
+
+    // 이 @Valid가 없으면 ProductDto 내부의 @NotBlank, @Min은 무시됩니다!
+    @Valid 
+    @NotNull(message = "상품 정보는 필수입니다.")
+    private ProductDto productDetails;
+
+    // 리스트(List) 형태도 마찬가지로 @Valid를 붙여 전파할 수 있습니다.
+    @Valid
+    @Size(min = 1, message = "최소 한 개 이상의 사은품을 선택해야 합니다.")
+    private List<GiftDto> giftList;
+}
+```
+- ProductDto가 OrderDto에 포함되어 있을 때 @Valid를 붙이지 않으면 
+- 이유는 @Valid만 붙인 걸 찾아가면 성능적인 이점이 있기 때문임
