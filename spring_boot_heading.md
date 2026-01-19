@@ -1165,3 +1165,378 @@ public class OrderDto {
 # 19. Custom Exception Handelr
 
 
+### 목표하는 에러 응답 예시
+- Response Body
+```json
+{
+  "error code" : "400",
+  "error type" : "Bad Request",
+  "message" : "Product Exception. 의도한 에러가 발생하였습니다."
+}
+```
+
+
+### HttpStatus
+- Enum 클래스
+  - 서로 관련 있는 상수들을 모아 심볼릭한 명칭의 집합으로 정의한 것
+  - 클래스처럼 보이게 하는 상수
+
+- value, series, reasonPhrase
+  - 400, Series.CLIENT_ERROR, "Bad Request"
+
+
+### Custom Exception
+- error type, error code, message에서 필요한 내용은 아래와 같음
+  - error type: HttpStatus의 reasonPhrase
+  - error code: HttpStatus의 value
+  - message: 상황별 디테일 Message
+
+
+### 실습
+- custom exception 만들기
+- exception handler에 적용하기
+
+- AroundHubException.java
+```java
+package studio.thinkground.testproject.common.exception;
+
+import org.springframework.http.HttpStatus;
+
+import studio.thinkground.testproject.common.Constants;
+
+public class AroundHubException extends Exception {
+    
+    private static final long serialVersionID = 4663380430591151694L;
+
+    private Constants.ExceptionClass exceptionClass;
+    private HttpStatus httpStatus;
+
+    public AroundHubException(Constants.ExceptionClass exceptionClass, HttpStatus httpStatus, String message) {
+        super(exceptionClass.toString() + message);
+        this.exceptionClass = exceptionClass;
+        this.httpStatus = httpStatus;
+    }
+
+    public Constants.ExceptionClass getExceptionClass() {
+        return exceptionClass;
+    }
+
+    public int getHttpStatusCode() {
+        return httpStatus.value();
+    }
+
+    public String getHttpStatusType(){
+        return httpStatus.getReasonPhrase();
+    }
+
+    public HttpStatus getHttpStatus() {
+        return httpStatus;
+    }
+}
+
+```
+
+```java
+package studio.thinkground.testproject.common.exception;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+@RestControllerAdvice
+public class AroundHubExceptionHandler {
+    
+    private final Logger LOGGER = LoggerFactory.getLogger(AroundHubExceptionHandler.class);
+
+    @ExceptionHandler(value=Exception.class)
+    public ResponseEntity<Map<String, String>> ExceptionHandler(Exception e) {
+        HttpHeaders responseHeaders = new HttpHeaders();
+
+        HttpStatus httpStatus = HttpStatus.BAD_REQUEST;
+        LOGGER.info(e.getLocalizedMessage());
+        LOGGER.info("Advice 내 ExceptionHandler 호출");
+
+        Map<String, String> map = new HashMap<>();
+        map.put("error type", httpStatus.getReasonPhrase());
+        map.put("code", "400");
+        map.put("message", "에러 발생");
+
+        return new ResponseEntity<>(map, responseHeaders, httpStatus);
+    }
+
+    @ExceptionHandler(value=AroundHubException.class)
+        public ResponseEntity<Map<String, String>> ExceptionHandler(AroundHubException e) {
+        HttpHeaders responseHeaders = new HttpHeaders();
+
+        LOGGER.info(e.getLocalizedMessage());
+        LOGGER.info("Advice 내 ExceptionHandler Custom 1 호출");
+
+        Map<String, String> map = new HashMap<>();
+        map.put("error type", e.getHttpStatusType());
+        map.put("code", Integer.toString(e.getHttpStatusCode()));
+        map.put("message", e.getMessage());
+
+        return new ResponseEntity<>(map, responseHeaders, e.getHttpStatus());
+    }
+}
+
+```
+
+```java
+@PostMapping(value="/product/exception")
+public void exceptionTest() throws AroundHubException {
+    throw new AroundHubException(ExceptionClass.PRODUCT, HttpStatus.BAD_REQUEST, "의도한 에러가 발생했습니다.");
+} 
+```
+
+
+### 추가 내용
+- RuntimeException을 상속 (Unchecked Exception)
+- Exception을 상속 (Checked Exception)
+- ResponseEntity<Map<String, String> Map 대신 응답용 DTO를 만들어서 사용하는 것을 추천
+
+
+
+---
+# 20. HTTP 통신을 위한 Rest Template 
+
+
+### Rest Template란?
+- 스프링에서 제공하는 HTTP 통신 기능을 쉽게 사용할 수 있게 설계되어 있는 템플릿
+- HTTP 서버와의 통신을 단순화하고 RESTful 원칙을 지킴
+- 동기 방식으로 처리되며, 비동기 방식으로는 AsyncRestTemplate이 있음
+- RestTemplate 클래스는 REST 서비스를 호출하도록 설계되어 HTTP 프로토콜의 메소드에 맞게 여러 메소드를 제공
+
+
+### RestTemplate의 여러 메소드
+- getForObject / GET / GET 형식으로 요청하여 객체로 결과를 반환 받음
+- getForEntity / GET / GET 형식으로 요청하여 ReponseEntity로 결과를 반환 받음
+- postForObject / POST / POST 형식으로 요청하여 객체로 결과를 반환 받음
+- postForEntity / POST / POST 형식으로 요청하여 ReponseEntity로 결과를 반환 받음
+- delete / DELETE / DELETE 형식으로 요청
+- put / PUT / PUT 형식으로 요청
+- patchForObject / PATCH / PATCH 형식으로 요청
+- **exchange** / any / HTTP 헤더를 생성하여 추가할 수 있고 어떤 형식에서도 사용할 수 있음
+
+
+### 실습
+- serverbox 프로젝트 하나 새로 생성
+  - 의존성, 다 기존 프로젝트랑 맞추기
+
+```java
+package studio.thinkground.testproject.service.impl;
+
+import java.net.URI;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.RequestEntity;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
+
+import studio.thinkground.testproject.dto.MemberDTO;
+import studio.thinkground.testproject.service.RestTemplateService;
+
+@Service
+public class RestTemplateServiceImpl implements RestTemplateService{
+
+    private final Logger LOGGER = LoggerFactory.getLogger(RestTemplateServiceImpl.class);
+
+    @Override
+    public String getAroundHub() {
+        URI uri = UriComponentsBuilder
+            .fromUriString("http://localhost:9090")
+            .path("/api/server/around-hub")
+            .encode()
+            .build()
+            .toUri();
+
+
+        RestTemplate restTemplate = new RestTemplate();
+        ResponseEntity<String> responseEntity = restTemplate.getForEntity(uri, String.class);
+
+        LOGGER.info("status code : {}" ,responseEntity.getStatusCode());
+        LOGGER.info("body : {}", responseEntity.getBody());
+
+        return responseEntity.getBody();
+    }
+
+    @Override
+    public String getName() {
+        URI uri = UriComponentsBuilder
+            .fromUriString("http://localhost:9090")
+            .path("/api/server/name")
+            .queryParam("name", "Flature")
+            .encode()
+            .build()
+            .toUri();
+
+
+        RestTemplate restTemplate = new RestTemplate();
+        ResponseEntity<String> responseEntity = restTemplate.getForEntity(uri, String.class);
+
+        LOGGER.info("status code : {}" ,responseEntity.getStatusCode());
+        LOGGER.info("body : {}", responseEntity.getBody());
+
+        return responseEntity.getBody();
+    }
+
+    @Override
+    public String getName2() {
+        URI uri = UriComponentsBuilder
+            .fromUriString("http://localhost:9090")
+            .path("/api/server/path-variable/{name}")
+            .encode()
+            .build()
+            .expand("Flature") // 복수의 값을 넣어야할 경우 ,로 구분
+            .toUri();
+
+
+        RestTemplate restTemplate = new RestTemplate();
+        ResponseEntity<String> responseEntity = restTemplate.getForEntity(uri, String.class);
+
+        LOGGER.info("status code : {}" ,responseEntity.getStatusCode());
+        LOGGER.info("body : {}", responseEntity.getBody());
+
+        return responseEntity.getBody();
+    }
+
+    @Override
+    public ResponseEntity<MemberDTO> postDto() {
+        URI uri = UriComponentsBuilder
+            .fromUriString("http://localhost:9090")
+            .path("/api/server/member")
+            .queryParam("name", "Flature")
+            .queryParam("email", "jjj@jjj.com")
+            .queryParam("organization", "Around Hub Studio")
+            .encode()
+            .build()
+            .toUri();
+
+        MemberDTO memberDTO = new MemberDTO();
+        memberDTO.setName("flature");
+        memberDTO.setEmail("aaa@aaa.com");
+        memberDTO.setOrganization("Around Hub Studio");
+
+        RestTemplate restTemplate = new RestTemplate();
+        ResponseEntity<MemberDTO> responseEntity = restTemplate.postForEntity(uri, memberDTO, MemberDTO.class);
+
+        LOGGER.info("status code : {}" ,responseEntity.getStatusCode());
+        LOGGER.info("body : {}", responseEntity.getBody());
+
+        return responseEntity;
+    }
+
+    @Override
+    public ResponseEntity<MemberDTO> addHeader() {
+        URI uri = UriComponentsBuilder
+            .fromUriString("http://localhost:9090")
+            .path("/api/server/add-header")
+            .encode()
+            .build()
+            .toUri();
+
+        MemberDTO memberDTO = new MemberDTO();
+        memberDTO.setName("flature");
+        memberDTO.setEmail("aaa@aaa.com");
+        memberDTO.setOrganization("Around Hub Studio");
+
+        RequestEntity<MemberDTO> requestEntity = RequestEntity
+            .post(uri)
+            .header("around-header", "Around Hub Stduio")
+            .body(memberDTO);
+
+        RestTemplate restTemplate = new RestTemplate();
+        ResponseEntity<MemberDTO> responseEntity = restTemplate.exchange(requestEntity, MemberDTO.class);
+
+        LOGGER.info("status code : {}" ,responseEntity.getStatusCode());
+        LOGGER.info("body : {}", responseEntity.getBody());
+
+        return responseEntity;
+    }
+    
+}
+```
+
+- 상대 서버 TestController
+```java
+package com.example.serverbox.controller;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.example.serverbox.dto.MemberDTO;
+
+@RestController
+@RequestMapping("/api/server")
+public class TestController {
+    
+    private final Logger LOGGER = LoggerFactory.getLogger(TestController.class);
+    
+    @GetMapping(value="/around-hub")
+    public String getTest1() {
+        LOGGER.info("getTest1 호출");
+        return "Hello. Around Hub Stduio!";
+    }
+
+    @GetMapping(value="/name")
+    public String getTest2(@RequestParam String name) {
+        LOGGER.info("getTest2 호출");
+        return "Hello. " + name + "!";
+    }
+
+    @GetMapping(value="/path-variable/{name}")
+    public String getTest3(@PathVariable("name") String name) {
+        LOGGER.info("getTest3 호출");
+        return "Hello. " + name + "!";
+    }
+
+    @PostMapping(value="/member")
+    public ResponseEntity<MemberDTO> getMember(
+        @RequestBody MemberDTO memberDTO,
+        @RequestParam String name,
+        @RequestParam String email,
+        @RequestParam String organization
+    ) {
+        LOGGER.info("getMember 호출");
+
+        return ResponseEntity.status(HttpStatus.OK).body(memberDTO);
+    }
+
+    @PostMapping(value="/add-header")
+    public ResponseEntity<MemberDTO> addHeader(
+        @RequestHeader("around-header") String header,
+        @RequestBody MemberDTO memberDTO
+    ) {
+        LOGGER.info("add-header 호출");
+        LOGGER.info("header 값 : {}", header);
+
+        return ResponseEntity.status(HttpStatus.OK).body(memberDTO);
+    }
+
+}
+```
+
+
+### 추가 내용
+- 나중에 인증 등을 위해서 exchage를 활용하여 헤더를 제어함
+- 추후 RestClient도 다뤄보면 좋음
