@@ -529,3 +529,125 @@ public class SwaggerConfiguration {
 
 ---
 # 13. Lombok
+
+
+
+### Lombok이란?
+- 반복되는 메소드를 Annotaion을 사용하여 자동으로 작성해주는 라이브러리
+- 일반적으로 VO, DTO, Model, Entity 등 데이터 클래스에서 주로 사용됨
+- 대표적으로 많이 사용되는 Annotaion
+  - @Getter
+  - @Setter
+  - @NoArgConstructor
+  - @AllArgConstructor
+  - @Data
+  - @ToString
+
+
+### Lombok 라이브러 의존성 설정
+```xml
+<dependency>
+  <groupId>org.projectlombok</groupId>
+  <artifactId>lombok</artifactId>
+  <optional>true</optional>
+</dependency>
+```
+
+
+### @Getter / @Setter
+- 해당 클래스에 선언되어 있는 필드를 기반으로 getField, setField와 같은 식으로 자동으로 메소드를 생성
+```java
+@Getter
+@Setter
+public class MemberDTO {
+  private String name;
+  private String email;
+  private String organization;
+}
+```
+
+
+### @NoArgsContructor / @AllArgsConstructor / @RequiredArgsConstructor
+- @NoArgsContructor: 파라미터가 없는 생성자를 생성
+- @AllArgsConstructor: 모든 필드값을 파라미터로 갖는 생성자를 생성
+- @RequiredArgsConstructor: 필드값 중 final이나 @NotNull인 값을 같는 생성자를 생성
+```java
+@NoArgsConstructor
+@RequiredArgsConstructor
+@AllArgsConstructor
+public class MemberDTO {
+  private String name;
+  private String email;
+  private String organization;
+}
+```
+
+
+### @ToSTring
+- toString 메소드를 자동으로 생성해주는 기능
+- @ToString 어노테이션에 exclude 속성을 사용하여 특정 필드를 toString에서 제외시킬 수 있음
+```java
+@ToString
+public class MemberDTO {
+  private String name;
+  private String email;
+  private String organization;
+}
+
+
+@ToString(exclude="email")
+public class MemberDTO {
+  private String name;
+  private String email;
+  private String organization;
+}
+
+@Override
+public String toString() {
+  return this.name + " " + this.email + " " + this.organization;
+}
+```
+- "MemberDTO(id=" + this.id + ", name=" + this.name + ", email=" + this.email + ")" 이 형식으로 작성됨
+
+
+### @EqualsAndHashCode
+- equals, hashCode 메소드를 자동으로 생성
+- equals: 두 객체가 내용이 같은지 동등성(equality)을 비교하는 연산자
+- hashCode: 두 객체가 완전히 같은 객체인지 동일성(identity)를 비교하는 연산자
+- callSuper 속성을 통해 메소드 생성시 부모 클래스의 필드까지 고려할지 여부 설정 가능
+  - callSuper = true => 부모 클래스 필드 값들도 동일한지 체크!!!
+
+
+### @Data
+- 해당 어노테이션을 사용하면, 앞서 나온 기능들을 한 번에 추가해줌
+  - @Getter
+  - @Setter
+  - @RequiredArgsConstructor
+  - @ToString
+  - @EqualsAndHashCode
+  - ...
+  - 불필요한 메소드가 추가될 수 있어서 기피하려는 경향이 있음
+
+
+### 주의할점
+- Lombok을 추가함으로써 특정 기능에 영향을 주는 경우가 있음!!!
+- PM 등의 성향에 따라 다름
+- 정답은 아님
+
+
+### Delombok
+- 어노테이션을 없애고 해당 기능을 코드로 작성해주는 기능
+- Refactor/delombok
+
+
+### @Builder
+- 생성자 파라미터가 많아질 때, 어떤 값이 어떤 필드인지 헷갈리는 것을 방지(Builder Pattern)
+- MemberDTO.builder().name("홍길동").email("test@gmail.com").build();
+
+
+---
+# 14. Entity, DAO, Repository, DTO (데이터베이스 적용하기)
+
+
+### Spring Boot 서비스 구조
+- Client <- DTO -> Controller <- DTO -> Service <- Entity -> DAO(Repository) <- Entity -> DB
