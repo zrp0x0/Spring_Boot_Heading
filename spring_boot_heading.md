@@ -1063,3 +1063,105 @@ public class OrderDto {
 ```
 - ProductDto가 OrderDto에 포함되어 있을 때 @Valid를 붙이지 않으면 
 - 이유는 @Valid만 붙인 걸 찾아가면 성능적인 이점이 있기 때문임
+
+
+
+---
+# 18. 예외 처리(Exception)
+
+
+### 스프링 부트의 예외 처리 방식
+- 크게 2가지 방법이 존재
+  - @ControllerAdvice를 통한 모든 Controller에서 발생할 수 있는 예외 처리
+  - @ExceptionHandler를 통한 특정 Controller의 예외 처리
+
+- @ContorllerAdvice로 모든 컨트롤러에서 발생할 예외를 정의하고
+- @ExceptionHandler를 통해 발생하는 예외마다 처리할 메소드를 정의
+
+
+### 예외 클래스
+- 모든 예외 클래스는 Throwable 클래스를 상속 받고 있음
+- Exception은 수많은 자식 클래스가 있음
+- RuntimeException은 Unchecked Exception이며, 그 외 Exception은 Checked Exception으로 볼 수 있음
+
+
+### Checked Exception vs Unchecked Exception
+- 처리 여부
+  - 반드시 예외 처리 필요
+  - 명시적 처리 강제하지 않음
+
+- 확인 시점
+  - 컴파일 단계
+  - 실행 중 단계
+
+- 예외 발생시 트랜잭션
+  - 롤백하지 않음
+  - 롤백함
+
+- 대표 예외
+  - IOException
+  - SQLException
+
+  - NULLPointerException
+  - IllegalArgumentException
+  - IndexOutOfBoundException
+  - SystemException
+
+
+### @ControllerAdvice, @RestControllerAdvice
+- @ControllerAdvice는 Spring에서 제공하는 어노테이션
+- @Controller나 @RestController에서 발생하는 예외를 한 곳에 관리하고 처리할 수 있게 하는 어노테이션
+- 설정을 통해 범위 지정이 가능하며, Default 값으로 모든 Controller에 대해 예외 처리를 관리함
+  - @RestControllerAdvice(basePackages="aroudhub.thinkground.studio")와 같이 패키지 범위를 설정할 수 있음
+- 예외 발생 시 json의 형태로 결과를 반환하기 위해서는 @RestControllerAdvice를 사용하면 됨
+- @RestControllerAdvice: @ControllerAdvice + @ResponseBody (REST API)용 예외처리에 특화
+
+
+### @ExceptionHandler
+- 예외 처리 상황이 발생하면 해당 Handler로 처리하겠다고 명시하는 어노테이션
+- 어노테이션 뒤에 괄호를 붙여 어떤 ExceptionClass를 처리할지 설정할 수 있음
+  - @ExceptionHandler(__Exception.class)
+- Exception.class는 최상위 클래스로 하위 세부 예외 처리 클래스로 설정한 핸들러가 존재하면, 그 핸들러가 우선처리하게 되며, 처리되지 못하는 예외 처리에 대해 ExceptionClass에서 핸들링함
+- @ControllerAdvice로 설정된 클래스 내에서 메소드로 정의할 수 있지만, 각 Controller 안에 설정도 가능
+- 전역 설정(@ControllerAdvice)보다 지역 설정(Controller)으로 정의한 Handler가 우선순위를 가짐
+
+
+### 우선 순위 도식화
+```java
+@ControllerAdvice
+@RestControllerAdvice
+  @ExceptionHandler(Exception.class)
+
+@ControllerAdvice
+@RestControllerAdvice
+  @ExceptionHandler(NullPointerException.class) // 이게 우선순위가 높음
+```
+
+```java
+@ControllerAdvice
+@RestControllerAdvice
+  @ExceptionHandler // 글로벌 예외처리
+
+@Controller
+@RestController
+  @ExceptionHandler // 컨트롤러 예외처리가 우선순위가 높음
+```
+
+
+### 에러 발생 상황 대처 방법 크게 2가지
+- 1. 에러가 발생 try-catch로 데이터에 대한 어긋남을 보정 (그니깐 에러에 대한 처리를 자체적으로 진행)
+- 2. 클라이언트에게 에러 메세지 통보
+
+
+### 추가 내용
+- 트랙잭션 롤백
+  - @Transactional은 기본적으로 RuntimeException과 Error만 롤백함
+  - IOException 같은 Checked Exception 발생시에도 롤백하고 싶다면
+    - @Transacational(rollbackFor = Exception.class)와 같이 설정을 해주어야함
+
+
+
+---
+# 19. Custom Exception Handelr
+
+
