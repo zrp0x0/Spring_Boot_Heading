@@ -741,5 +741,90 @@ spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MariaDB103Dialect
 # 15. ORM, JPA, Spring Data JPA 적용하기
 
 
+### ORM이란?
+- Object Relational Mapping
+- 어플리케이션의 객체와 관계형 데이터베이스를 자동으로 매핑해주는 것을 의미
+  - Java의 데이터 클래스와 관계형 데이터베이스의 테이블을 매핑
+- 객체지향 프로그래밍과 관계형 데이터베이스의 차이로 발생하는 제약사항을 해결해주는 역할을 수행
+- 대표적으로 JPA, Hibernate 등이 있음 (PErsistent API)
 
-### 
+- Spring Boot Application
+  - String name
+  - String email
+  - String organization
+
+- ORM Mapping
+
+- Database
+  - name
+  - email
+  - organization
+
+
+### ORM의 장점
+- SQL 쿼리가 아닌 직관적인 코드로 데이터를 조작할 수 있음
+  - 개발자가 보다 비즈니스 로직에 집중할 수 있음
+
+- 재사용 및 유지보수 편리
+  - ORM은 독립적으로 작성되어 있어 재사용 가능
+  - 매핑 정보를 명확하게 설계하기 때문에 따로 데이터베이스를 볼 필요가 없음
+
+- DBMS에 대한 종속성이 줄어듬
+  - DBMS를 교체하는 작업은 비교적 적은 리스크로 수행 가능
+
+
+### ORM의 단점
+- 복잡성이 커질 경우 ORM만으로 구현하기 어려움
+  - 직접 쿼리를 구현하지 않아 복잡한 설계가 어려움
+
+- 잘못 구현할 경우 속도 저하 발생
+  - 코드를 쿼리로 변환하는데도 속도 저하가 발생할 수 있음
+
+- 대형 쿼리는 별도의 튜닝이 필요할 수 있음
+
+
+### JPA란?
+- Java Persistance API의 줄임말이며, ORM과 관련된 인터페이스의 모음
+- Java 진영에서 표준 ORM으로 채택되어 있음
+- ORM이 큰 개념이라고 하면, JAP는 더 구체화 시킨 스펙을 포함하고 있음
+
+
+### Hibernate
+- ORM Framework 중 하나
+- JPA의 실제 구현체 중 하나이며, 현재 JPA 구현체 중 가장 많이 사용됨
+  - EclipseLink
+  - Hibernate
+  - DataNucleus
+
+
+### Spring Data JPA
+- Spring Framework에서 JPA를 편리하게 사용할 수 있게 지원하는 라이브러리
+  - CRUD 처리용 인터페이스 제공
+  - Repository 개발 시 **인터페이스만 작성하면** 구현 객체를 동적으로 생성해서 주입
+  - 데이터 접근 계층 개발시 인터페이스만 작성해도 됨
+
+- Hibernate에서 자주 사용되는 기능을 조금 더 쉽게 사용할 수 있게 구현
+  - Spring Boot Application - Hibernate(Spring Data JPA) - Database
+
+- 실제 흐름
+  - Spring Boot Application -> Spring Data JPA -> JPA -> Hibernate -> JDBC -> DB
+
+
+### 로직 순서 확인
+- Service <- DTO -> DataHandler <- Entity -> DAO <- Entity -> Repository <- Entity -> Database
+
+
+### AutoWired
+- Bean 객체 주입
+  - @Service
+    - 이게 만약 구현체가 두 개면?
+      - 1. @Primary: 이걸 먼저 사용해라 - 구현체에 명시 
+      - 2. @Qualifier("subHandler"): 이거 써라 명시 - 구현체/사용체에 명시
+
+
+### AOP
+- 나중에 공부할 AOP에서 특정 어노테이션이 붙은 클래스에만 공통 로직을 적용하게 할 수 있음
+- 그리고 @Controller @Service @Repository에는 모두 @Component가 붙어있음
+
+
+
