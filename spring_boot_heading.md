@@ -828,3 +828,142 @@ spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MariaDB103Dialect
 
 
 
+---
+# 16. Logback
+
+
+### Logback이란?
+- Log4J를 기반으로 개발된 로깅 라이브러리
+- log4j에 비해 약 10배 정도 빠른 퍼포먼스, 메모리 효율성 증대
+- log4j -> logback -> log4j2
+
+
+### Logback 특징
+- 로그에 특정 레벨을 설정할 수 있음(Trace -> Debug -> Info -> Warn -> Error)
+- 실운영과 테스트 상황에서 각각 다른 출력 레벨을 설정하여 로그를 확인할 수 있음
+- 출력 방식에 대해 설정할 수 있음 (콘솔, 파일, 디비, 이메일 등등)
+- 설정 파일을 일정 시간마다 스캔하여 어플리케이션 중단 없이 설정 변경 가능
+- 별도의 프로그램 없이 자체적으로 로그 압축 지원
+- 로그 보관 기간 설정 가능
+
+
+### Logback 구조
+- 나중에 이미지 참조(3:50)
+
+
+### Logback 설정
+- 일반적으로 Classpath에 있는 logback 설정 파일을 참조하게 됨
+  - Java Legacy, Spring의 경우에는 logback.xml 파일을 참조
+  - Spring Boot의 경우에는 logback-spring.xml 파일을 참조
+
+
+### Logback 설정 파일 형식
+- pattern - encoder 영역
+- appender 영역
+- root 영역
+
+
+### Appender 영역
+- Log의 형태 및 어디에 출력할지 설정하기 위한 영역
+- 대표적인 Appender 형식은 아래와 같음
+  - ConsoleAppender: 콘솔에 로그를 출력
+  - FileAppender: 파일에 로그를 출력
+  - **RollingFileAppender**: 여러 개의 파일을 순회하며 로그를 저장 / 로그 레벨 기준
+  - SMTPAppender: 로그를 메일로 보냄
+  - DBAppender: 데이터베이스에 로그를 저장
+
+
+### Encoder 영역
+- Appender 내에 포함되는 항목이며, pattern을 사용하여 원하는 형식으로 로그를 표현할 수 있음
+```xml
+<encoder>
+  <pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}][%-5level][%thread] %logger %msg%n</pattern>
+</encoder>
+```
+
+
+### Root 영역
+- 설정한 Appender를 참조하여 로그의 레벨을 설정할 수 있음
+- root는 전역 설정이며, 지역 설정을 하기 위해서는 logger를 사용
+```xml
+<root level="DEBUG"> // DEBUG 레벨부터 잡겠다는 의미
+  <appender-ref ref="INFO_LOG"/>
+</root>
+```
+
+
+### 로그 레벨
+- TRACE -> DEBUG -> INFO -> WARN -> ERROR
+  - ERROR: 로직 수행 중 오류가 발생한 경우, 시스템적으로 심각한 문제가 발생하여 작동이 불가한 경우
+  - WARN: 시스템 에러의 원인이 될 수 있는 경고 레벨, 처리 가능한 사항
+  - INFO: 상태 변경과 같은 정보성 메시지
+  - DEBUG: 어플리케이션의 디버깅을 위한 메시지 레벨
+  - TRACE: DEBUG 레벨보다 더 디테일한 메시지를 표현하기 위한 레벨
+
+- 예를 들어 로그 레벨을 INFO라고 설정했을 경우, TRACE, DEBUG 레벨은 출력되지 않음
+
+
+### Pattern
+- 이건 직접 찾아보면서 하는 것이 맞을 듯: 지금 당장 외울 수는 없음
+
+
+### logback-spring.xml
+- 이거 작성되어있음 그냥 사용하면 됨
+- spring boot는 따로 logback 의존성 설정을 안해줘도 됨
+- import org.slf4j.Logger;
+- import org.slf4j.LoggerFactory;
+
+
+### 실습
+```java
+    @GetMapping(value="/product/{productId}")
+    public ProductDto getProduct(@PathVariable("productId") String productId) {
+
+        long startTime = System.currentTimeMillis();
+        LOGGER.info("[ProductController] perform {} of Around Hub API", "getProduct");
+
+        ProductDto productDto = productService.getProduct(productId);
+
+        LOGGER.info("[ProductController] Response :: productId = {}, productName = {}, productPrice = {}, productStock = {}, Response Time = {}ms", productDto.getProductId(), productDto.getProductName(), productDto.getProductPrice(), productDto.getProductStock(), (System.currentTimeMillis() - startTime));
+
+        return productDto;
+    }
+```
+
+
+### Logback 결론
+- 로그 설정 파일을 만들고
+- 내가 원하는 레벨의 로그만 콘솔에 찍히도록 할 수 있음
+- 추후 성능 측정 시 사용하면 좋음
+
+
+### 추가 내용
+- import org.slf4j.Logger;
+  - Logback은 실제 로깅을 수행하는 구현체이고, SLF4J는 추상화된 **인터페이스(Facade)**입니다.
+  - 나중에 로깅 라이브러리를 Logback에서 Log4j2로 바꾸고 싶을 때, 소스 코드를 한 줄도 수정하지 않고 설정(의존성)만 바꾸면 되기 때문입니다.
+
+- 로그 패턴 실무 추천
+  - %d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n
+
+- 롬북 활용
+```java
+import lombok.extern.slf4j.Slf4j; // 롬복 어노테이션
+
+@Slf4j // 이 한 줄로 모든 설정 끝!
+public class ProductController {
+
+    public void someMethod() {
+        // 별도의 선언 없이 'log'라는 변수명을 바로 사용하면 됩니다.
+        log.info("롬복 덕분에 로그 찍기가 정말 편해졌습니다.");
+    }
+}
+```
+  - 단, log라는 변수명 고정
+
+
+
+---
+# 17. 유효성 검사
+
+
+### 
