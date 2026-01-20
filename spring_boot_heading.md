@@ -2048,3 +2048,14 @@ public class DIController {
 - spring-boot-starter-security: 스프링 시큐리티(인증, 권한)
 - spring-boot-starter-data-jpa: Spring Data JPA (Hibernate)
 - spring-boot-starter-cache: 캐시
+
+
+
+--- 
+# 26. 스프링 부트 기초 강의를 마치며
+- 일단 나한테 수고햇어.
+- 하지만 50퍼도 못왔어. 
+- 조금만 더 힘내자.
+- 지금 이 순간이 언젠간 도움이 될거라는 믿음과 함께
+
+
